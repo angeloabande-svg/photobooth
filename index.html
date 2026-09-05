@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photobooth</title>
+    <title>Photobooth App</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- QRCode JS Library -->
@@ -11,8 +11,14 @@
 </head>
 <body class="bg-black text-white min-h-screen flex flex-col items-center justify-center p-4">
 
+    <!-- Status Bar -->
+    <div class="flex justify-between w-full max-w-md text-xs text-gray-400 mb-4 px-2">
+        <span>58mm Roll</span>
+        <span class="text-green-400 font-semibold">READY (WEB BT)</span>
+    </div>
+
     <!-- App Container -->
-    <div id="app" class="flex flex-col items-center max-w-md w-full">
+    <div id="app" class="flex flex-col items-center max-w-md w-full bg-[#121212] p-6 rounded-2xl shadow-2xl border border-gray-800">
         
         <!-- Header / Title -->
         <h1 class="text-2xl font-bold mb-1 text-center">Get Your Digital Copies</h1>
@@ -34,7 +40,7 @@
         </div>
 
         <!-- Action Button -->
-        <button onclick="resetSession()" class="w-full bg-[#1e1e1e] hover:bg-[#2e2e2e] text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md">
+        <button onclick="resetSession()" class="w-full bg-[#1e1e1e] hover:bg-[#2e2e2e] text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md border border-gray-700">
             FINISH & RESET SESSION
         </button>
 
@@ -42,7 +48,7 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // Your live GitHub Pages public URL
+        // Your permanent live GitHub Pages URL
         const LIVE_SITE_URL = "https://angeloabande-svg.github.io/photobooth/";
 
         function renderDigitalQRs() {
@@ -53,7 +59,7 @@
             gifContainer.innerHTML = "";
             jpgContainer.innerHTML = "";
 
-            // Generate HD Color QR pointing to your live cloud URL
+            // Generate HD Color QR pointing directly to your live cloud URL
             new QRCode(jpgContainer, {
                 text: LIVE_SITE_URL,
                 width: 90,
@@ -63,7 +69,7 @@
                 correctLevel: QRCode.CorrectLevel.M
             });
 
-            // Generate Animated GIF QR pointing to your live cloud URL
+            // Generate Animated GIF QR pointing directly to your live cloud URL
             new QRCode(gifContainer, {
                 text: LIVE_SITE_URL,
                 width: 90,
@@ -75,7 +81,6 @@
         }
 
         function resetSession() {
-            // Placeholder action to handle resetting the booth state
             alert("Session reset! Ready for the next user.");
             // location.reload(); // Uncomment if you want it to refresh the page entirely
         }
