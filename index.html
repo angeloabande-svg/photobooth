@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photobooth App</title>
+    <title>Resibo Prints - Cashless Photobooth</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- QRCode JS Library -->
@@ -14,27 +14,98 @@
     <!-- Status Bar -->
     <div class="flex justify-between w-full max-w-md text-xs text-gray-400 mb-4 px-2">
         <span>58mm Roll</span>
-        <span id="connection-status" class="text-green-400 font-semibold">READY (WEB BT)</span>
+        <span class="text-green-400 font-semibold">READY (WEB BT)</span>
     </div>
 
     <!-- App Container -->
     <div id="app" class="flex flex-col items-center max-w-md w-full bg-[#121212] p-6 rounded-2xl shadow-2xl border border-gray-800">
         
-        <!-- Screen 1: Camera Live View & Capture -->
-        <div id="camera-screen" class="flex flex-col items-center w-full">
-            <div class="relative w-full aspect-[3/4] bg-gray-900 rounded-xl overflow-hidden mb-4 border border-gray-700 flex items-center justify-center">
-                <video id="webcam" autoplay playsinline class="w-full h-full object-cover"></video>
-                <div id="countdown" class="absolute text-6xl font-bold text-white drop-shadow-lg hidden">3</div>
-            </div>
-            <button onclick="startCaptureSequence()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md">
-                TAKE PHOTO
+        <!-- Step 1: Tap to Start Screen -->
+        <div id="screen-start" class="flex flex-col items-center w-full py-12">
+            <h1 class="text-3xl font-bold mb-2 text-center tracking-wide">Resibo Prints</h1>
+            <p class="text-sm text-gray-400 mb-8 text-center italic">proof of ganap</p>
+            <button onclick="goToPayment()" class="w-full bg-white text-black hover:bg-gray-200 font-bold py-4 px-6 rounded-xl transition duration-200 shadow-lg text-lg tracking-wider">
+                TAP TO START
             </button>
         </div>
 
-        <!-- Screen 2: QR Code Result (Initially Hidden) -->
-        <div id="qr-screen" class="flex flex-col items-center w-full hidden">
-            <h1 class="text-2xl font-bold mb-1 text-center">Get Your Digital Copies</h1>
-            <p class="text-sm text-gray-400 mb-6 text-center">Scan QR to download your photo</p>
+        <!-- Step 2: QR Payment Screen -->
+        <div id="screen-payment" class="flex flex-col items-center w-full hidden">
+            <h2 class="text-xl font-bold mb-4 text-center">QRPH Payment</h2>
+            <div class="bg-white p-4 rounded-xl shadow-lg mb-6 flex flex-col items-center">
+                <div id="payment-qrcode" class="w-[150px] h-[150px] flex items-center justify-center mb-2"></div>
+                <span class="text-xs text-black font-semibold">Scan to Pay (PHP 50)</span>
+            </div>
+            <button onclick="simulatePaymentReceived()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md">
+                Payment Received (Simulate)
+            </button>
+        </div>
+
+        <!-- Step 3: Layout Selection Screen -->
+        <div id="screen-layout" class="flex flex-col items-center w-full hidden">
+            <h2 class="text-xl font-bold mb-4 text-center">SELECT YOUR LAYOUT</h2>
+            <div class="grid grid-cols-2 gap-4 w-full mb-6">
+                <div onclick="selectLayout('grid4')" class="bg-gray-800 hover:bg-gray-700 p-4 rounded-xl border border-gray-700 cursor-pointer flex flex-col items-center">
+                    <span class="text-xs font-semibold mb-2">Resibo Prints</span>
+                    <div class="grid grid-cols-2 gap-1 w-12 h-16 bg-black p-1 rounded">
+                        <div class="bg-gray-500"></div><div class="bg-gray-500"></div>
+                        <div class="bg-gray-500"></div><div class="bg-gray-500"></div>
+                    </div>
+                </div>
+                <div onclick="selectLayout('grid4')" class="bg-gray-800 hover:bg-gray-700 p-4 rounded-xl border border-gray-700 cursor-pointer flex flex-col items-center">
+                    <span class="text-xs font-semibold mb-2">Resibo Prints</span>
+                    <div class="grid grid-cols-2 gap-1 w-12 h-16 bg-black p-1 rounded">
+                        <div class="bg-gray-500"></div><div class="bg-gray-500"></div>
+                        <div class="bg-gray-500"></div><div class="bg-gray-500"></div>
+                    </div>
+                </div>
+            </div>
+            <button class="w-full bg-[#1e1e1e] text-gray-400 font-semibold py-2 px-4 rounded-xl border border-gray-700 text-xs cursor-default">
+                Preferred Manual
+            </button>
+        </div>
+
+        <!-- Step 4: Camera & Countdown Screen -->
+        <div id="screen-camera" class="flex flex-col items-center w-full hidden">
+            <div class="relative w-full aspect-[3/4] bg-gray-900 rounded-xl overflow-hidden mb-4 border border-gray-700 flex items-center justify-center">
+                <video id="webcam" autoplay playsinline class="w-full h-full object-cover"></video>
+                <div id="countdown" class="absolute text-7xl font-bold text-white drop-shadow-lg hidden">3</div>
+            </div>
+            <button id="btn-take-photo" onclick="startCountdown()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md">
+                START
+            </button>
+        </div>
+
+        <!-- Step 5: Sticker / Editing Screen -->
+        <div id="screen-edit" class="flex flex-col items-center w-full hidden">
+            <h2 class="text-xl font-bold mb-2 text-center">Resibo Prints</h2>
+            <div class="relative w-full aspect-[3/4] bg-white text-black rounded-xl overflow-hidden mb-4 p-2 flex flex-col items-center justify-center">
+                <div id="captured-preview-container" class="w-full h-full bg-gray-200 rounded grid grid-cols-2 gap-1 overflow-hidden relative">
+                    <!-- Preview photos go here -->
+                </div>
+                <!-- Example sticker -->
+                <div class="absolute text-red-500 text-2xl top-4 right-4 select-none cursor-pointer">❤️</div>
+            </div>
+            <div class="flex gap-2 w-full mb-4">
+                <button onclick="addSticker('❤️')" class="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded-lg text-sm font-semibold">❤️</button>
+                <button onclick="addSticker('⭐')" class="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded-lg text-sm font-semibold">⭐</button>
+                <button onclick="addSticker('🔥')" class="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded-lg text-sm font-semibold">🔥</button>
+            </div>
+            <button onclick="proceedToPrint()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md">
+                PRINT
+            </button>
+        </div>
+
+        <!-- Step 6: Printing Status Screen -->
+        <div id="screen-printing" class="flex flex-col items-center w-full py-12 hidden">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+            <h2 class="text-lg font-semibold text-center">Printing your copy...</h2>
+        </div>
+
+        <!-- Step 7: Digital Copies QR Download Screen -->
+        <div id="screen-qr-download" class="flex flex-col items-center w-full hidden">
+            <h1 class="text-xl font-bold mb-1 text-center">GET YOUR DIGITAL COPIES</h1>
+            <p class="text-xs text-gray-400 mb-6 text-center">Scan QR to download your photo</p>
 
             <div class="flex flex-row gap-4 mb-6">
                 <!-- Animated GIF QR Card -->
@@ -50,37 +121,117 @@
                 </div>
             </div>
 
-            <!-- Action Button to Restart Session -->
             <button onclick="resetSession()" class="w-full bg-[#1e1e1e] hover:bg-[#2e2e2e] text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md border border-gray-700">
-                FINISH & RESET SESSION
+                FINISH
             </button>
         </div>
 
     </div>
 
-    <!-- JavaScript Logic -->
+    <!-- JavaScript Application Flow Logic -->
     <script>
-        // Your permanent live GitHub Pages URL
         const LIVE_SITE_URL = "https://angeloabande-svg.github.io/photobooth/";
         const videoElement = document.getElementById('webcam');
+        let streamInstance = null;
 
-        // Initialize Webcam on Load
+        function showScreen(screenId) {
+            const screens = ['screen-start', 'screen-payment', 'screen-layout', 'screen-camera', 'screen-edit', 'screen-printing', 'screen-qr-download'];
+            screens.forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
         async function initWebcam() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                videoElement.srcObject = stream;
-            } catch (err) {
-                console.error("Webcam access error:", err);
-                alert("Could not access camera. Please check permissions.");
+            if (!streamInstance) {
+                try {
+                    streamInstance = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    videoElement.srcObject = streamInstance;
+                } catch (err) {
+                    console.error("Webcam access error:", err);
+                }
             }
         }
 
-        function startCaptureSequence() {
-            // Simulate capture process, then transition to QR screen
-            // For now, jump directly to showing the QR codes and hiding the camera
-            document.getElementById('camera-screen').classList.add('hidden');
-            document.getElementById('qr-screen').classList.remove('hidden');
-            renderDigitalQRs();
+        function goToPayment() {
+            showScreen('screen-payment');
+            const paymentContainer = document.getElementById('payment-qrcode');
+            paymentContainer.innerHTML = "";
+            new QRCode(paymentContainer, {
+                text: LIVE_SITE_URL + "?pay=success",
+                width: 150,
+                height: 150,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
+        function simulatePaymentReceived() {
+            showScreen('screen-layout');
+        }
+
+        function selectLayout(layoutType) {
+            showScreen('screen-camera');
+            initWebcam();
+        }
+
+        function startCountdown() {
+            const countdownEl = document.getElementById('countdown');
+            const takePhotoBtn = document.getElementById('btn-take-photo');
+            takePhotoBtn.classList.add('hidden');
+            countdownEl.classList.remove('hidden');
+            
+            let count = 3;
+            countdownEl.innerText = count;
+
+            let timer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownEl.innerText = count;
+                } else {
+                    clearInterval(timer);
+                    countdownEl.classList.add('hidden');
+                    takePhotoBtn.classList.remove('hidden');
+                    capturePhotosSequence();
+                }
+            }, 1000);
+        }
+
+        function capturePhotosSequence() {
+            // Capture simulated frames into the edit screen preview
+            const previewContainer = document.getElementById('captured-preview-container');
+            previewContainer.innerHTML = "";
+            
+            // Create 4 simulated snapshot blocks from current video stream
+            for (let i = 0; i < 4; i++) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 150;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                
+                const img = document.createElement('img');
+                img.src = canvas.toDataURL('image/png');
+                img.className = "w-full h-full object-cover rounded";
+                previewContainer.appendChild(img);
+            }
+
+            showScreen('screen-edit');
+        }
+
+        function addSticker(symbol) {
+            // Visual interaction feedback for sticker addition
+            console.log("Added sticker:", symbol);
+        }
+
+        function proceedToPrint() {
+            showScreen('screen-printing');
+            // Simulate printer hardware response delay
+            setTimeout(() => {
+                showScreen('screen-qr-download');
+                renderDigitalQRs();
+            }, 3000);
         }
 
         function renderDigitalQRs() {
@@ -90,7 +241,6 @@
             gifContainer.innerHTML = "";
             jpgContainer.innerHTML = "";
 
-            // Generate HD Color QR pointing directly to your live cloud URL
             new QRCode(jpgContainer, {
                 text: LIVE_SITE_URL,
                 width: 90,
@@ -100,7 +250,6 @@
                 correctLevel: QRCode.CorrectLevel.M
             });
 
-            // Generate Animated GIF QR pointing directly to your live cloud URL
             new QRCode(gifContainer, {
                 text: LIVE_SITE_URL,
                 width: 90,
@@ -112,16 +261,8 @@
         }
 
         function resetSession() {
-            // Switch back to camera screen and restart flow
-            document.getElementById('qr-screen').classList.add('hidden');
-            document.getElementById('camera-screen').classList.remove('hidden');
+            showScreen('screen-start');
         }
-
-        // Start webcam feed when the page loads
-        window.onload = function() {
-            initWebcam();
-        };
     </script>
-
 </body>
 </html>
