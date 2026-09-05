@@ -14,35 +14,47 @@
     <!-- Status Bar -->
     <div class="flex justify-between w-full max-w-md text-xs text-gray-400 mb-4 px-2">
         <span>58mm Roll</span>
-        <span class="text-green-400 font-semibold">READY (WEB BT)</span>
+        <span id="connection-status" class="text-green-400 font-semibold">READY (WEB BT)</span>
     </div>
 
     <!-- App Container -->
     <div id="app" class="flex flex-col items-center max-w-md w-full bg-[#121212] p-6 rounded-2xl shadow-2xl border border-gray-800">
         
-        <!-- Header / Title -->
-        <h1 class="text-2xl font-bold mb-1 text-center">Get Your Digital Copies</h1>
-        <p class="text-sm text-gray-400 mb-6 text-center">Scan QR to download your photo</p>
-
-        <!-- QR Display Section -->
-        <div class="flex flex-row gap-4 mb-6">
-            <!-- Animated GIF QR Card -->
-            <div class="bg-white text-black p-4 rounded-xl flex flex-col items-center shadow-lg">
-                <div id="gif-qrcode-container" class="w-[90px] h-[90px] flex items-center justify-center mb-2"></div>
-                <span class="text-xs font-semibold tracking-wider">Animated GIF</span>
+        <!-- Screen 1: Camera Live View & Capture -->
+        <div id="camera-screen" class="flex flex-col items-center w-full">
+            <div class="relative w-full aspect-[3/4] bg-gray-900 rounded-xl overflow-hidden mb-4 border border-gray-700 flex items-center justify-center">
+                <video id="webcam" autoplay playsinline class="w-full h-full object-cover"></video>
+                <div id="countdown" class="absolute text-6xl font-bold text-white drop-shadow-lg hidden">3</div>
             </div>
-
-            <!-- HD Color QR Card -->
-            <div class="bg-white text-black p-4 rounded-xl flex flex-col items-center shadow-lg">
-                <div id="jpg-qrcode-container" class="w-[90px] h-[90px] flex items-center justify-center mb-2"></div>
-                <span class="text-xs font-semibold tracking-wider">HD Color</span>
-            </div>
+            <button onclick="startCaptureSequence()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md">
+                TAKE PHOTO
+            </button>
         </div>
 
-        <!-- Action Button -->
-        <button onclick="resetSession()" class="w-full bg-[#1e1e1e] hover:bg-[#2e2e2e] text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md border border-gray-700">
-            FINISH & RESET SESSION
-        </button>
+        <!-- Screen 2: QR Code Result (Initially Hidden) -->
+        <div id="qr-screen" class="flex flex-col items-center w-full hidden">
+            <h1 class="text-2xl font-bold mb-1 text-center">Get Your Digital Copies</h1>
+            <p class="text-sm text-gray-400 mb-6 text-center">Scan QR to download your photo</p>
+
+            <div class="flex flex-row gap-4 mb-6">
+                <!-- Animated GIF QR Card -->
+                <div class="bg-white text-black p-4 rounded-xl flex flex-col items-center shadow-lg">
+                    <div id="gif-qrcode-container" class="w-[90px] h-[90px] flex items-center justify-center mb-2"></div>
+                    <span class="text-xs font-semibold tracking-wider">Animated GIF</span>
+                </div>
+
+                <!-- HD Color QR Card -->
+                <div class="bg-white text-black p-4 rounded-xl flex flex-col items-center shadow-lg">
+                    <div id="jpg-qrcode-container" class="w-[90px] h-[90px] flex items-center justify-center mb-2"></div>
+                    <span class="text-xs font-semibold tracking-wider">HD Color</span>
+                </div>
+            </div>
+
+            <!-- Action Button to Restart Session -->
+            <button onclick="resetSession()" class="w-full bg-[#1e1e1e] hover:bg-[#2e2e2e] text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md border border-gray-700">
+                FINISH & RESET SESSION
+            </button>
+        </div>
 
     </div>
 
@@ -50,12 +62,31 @@
     <script>
         // Your permanent live GitHub Pages URL
         const LIVE_SITE_URL = "https://angeloabande-svg.github.io/photobooth/";
+        const videoElement = document.getElementById('webcam');
+
+        // Initialize Webcam on Load
+        async function initWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                videoElement.srcObject = stream;
+            } catch (err) {
+                console.error("Webcam access error:", err);
+                alert("Could not access camera. Please check permissions.");
+            }
+        }
+
+        function startCaptureSequence() {
+            // Simulate capture process, then transition to QR screen
+            // For now, jump directly to showing the QR codes and hiding the camera
+            document.getElementById('camera-screen').classList.add('hidden');
+            document.getElementById('qr-screen').classList.remove('hidden');
+            renderDigitalQRs();
+        }
 
         function renderDigitalQRs() {
             const gifContainer = document.getElementById('gif-qrcode-container');
             const jpgContainer = document.getElementById('jpg-qrcode-container');
             
-            // Clear out any previous QR elements
             gifContainer.innerHTML = "";
             jpgContainer.innerHTML = "";
 
@@ -81,13 +112,14 @@
         }
 
         function resetSession() {
-            alert("Session reset! Ready for the next user.");
-            // location.reload(); // Uncomment if you want it to refresh the page entirely
+            // Switch back to camera screen and restart flow
+            document.getElementById('qr-screen').classList.add('hidden');
+            document.getElementById('camera-screen').classList.remove('hidden');
         }
 
-        // Initialize QR rendering on page load
+        // Start webcam feed when the page loads
         window.onload = function() {
-            renderDigitalQRs();
+            initWebcam();
         };
     </script>
 
