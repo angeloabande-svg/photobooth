@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermobooth App - Cashless Platinum</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lightweight QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col justify-between select-none overflow-hidden">
+
+    <!-- Top Status Bar -->
+    <header class="w-full flex items-center justify-between px-4 py-3 bg-black/85 backdrop-blur z-10 text-xs border-b border-zinc-900">
+        <div class="flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500" id="printer-dot"></span>
+            <span id="printer-label" class="text-zinc-400 font-mono">58mm Roll</span>
+        </div>
+        <div id="printer-status-badge" class="px-2 py-0.5 bg-emerald-600/20 text-emerald-400 rounded font-mono text-[10px]">
+            READY (WEB BT)
+        </div>
+        <div class="text-zinc-500 font-mono">Cashless Mode</div>
+    </header>
+
+    <!-- Main Viewport Stack -->
+    <main class="relative flex-1 flex flex-col items-center justify-center p-2">
+        
+        <!-- View Section: Welcome / Tap to Start Screen -->
+        <section id="view-welcome" class="relative w-full max-w-md h-[72vh] bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 flex flex-col items-center justify-center p-6 shadow-2xl text-center">
+            <div class="absolute top-6 text-xs uppercase tracking-widest text-zinc-500 font-mono">Proof of Ganap</div>
+            <div class="space-y-3 mb-8">
+                <h1 id="brand-title-display" class="text-3xl font-black tracking-tight text-white">Resibo Prints</h1>
+                <p class="text-xs text-zinc-400 font-mono">cashless platinum edition</p>
+            </div>
+            
+            <button id="start-btn" class="w-48 h-48 rounded-full border-4 border-dashed border-zinc-700 bg-zinc-900 hover:bg-zinc-800 flex flex-col items-center justify-center gap-2 shadow-2xl active:scale-95 transition cursor-pointer group">
+                <svg class="w-8 h-8 text-zinc-400 group-hover:text-white transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                <span class="text-xs font-bold tracking-widest uppercase font-mono text-zinc-300">Tap to Start</span>
+            </button>
+        </section>
+
+        <!-- View Section: Payment QR Screen -->
+        <section id="view-payment" class="hidden relative w-full max-w-md h-[72vh] bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 flex flex-col items-center justify-center p-6 shadow-2xl text-center">
+            <div class="mb-4">
+                <h2 class="text-lg font-bold">Scan to Payment</h2>
+                <p class="text-xs text-zinc-400 font-mono mt-1">Please scan QR via GCash / Maya</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-inner mb-6">
+                <div id="payment-qrcode-container" class="w-44 h-44 flex items-center justify-center"></div>
+            </div>
+            <div class="flex flex-col gap-3 w-full max-w-xs">
+                <button id="sim-paid-btn" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition shadow-lg">
+                    Simulate Payment Received
+                </button>
+                <button onclick="switchView('welcome')" class="text-xs text-zinc-500 hover:text-zinc-300 transition">Cancel</button>
+            </div>
+        </section>
+
+        <!-- View Section: Layout Selection Screen -->
+        <section id="view-layout" class="hidden relative w-full max-w-md h-[72vh] bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 flex flex-col p-6 shadow-2xl">
+            <h2 class="text-base font-bold mb-1">Select Your Layout</h2>
+            <p class="text-xs text-zinc-400 font-mono mb-4">Choose grid format for 58mm thermal roll</p>
+            
+            <div class="grid grid-cols-2 gap-3 flex-1">
+                <button onclick="selectLayout(1)" class="bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex flex-col items-center justify-center gap-2 hover:border-white transition">
+                    <div class="w-12 h-16 bg-zinc-800 rounded"></div>
+                    <span class="text-[10px] font-mono text-zinc-400">Single Frame</span>
+                </button>
+                <button onclick="selectLayout(4)" class="bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex flex-col items-center justify-center gap-2 hover:border-white transition">
+                    <div class="w-14 h-16 bg-zinc-800 rounded grid grid-cols-2 gap-0.5 p-1">
+                        <div class="bg-zinc-700 rounded-xs"></div><div class="bg-zinc-700 rounded-xs"></div>
+                        <div class="bg-zinc-700 rounded-xs"></div><div class="bg-zinc-700 rounded-xs"></div>
+                    </div>
+                    <span class="text-[10px] font-mono text-zinc-400">Quad Split (4)</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- View Section: Camera Screen -->
+        <section id="view-camera" class="hidden relative w-full max-w-md h-[72vh] bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 flex items-center justify-center shadow-2xl">
+            <video id="webcam" autoplay playsinline muted class="w-full h-full object-cover"></video>
+            <canvas id="snapshot-canvas" class="hidden"></canvas>
+            
+            <!-- Countdown Overlay Badge -->
+            <div id="countdown-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center hidden z-30">
+                <div class="flex flex-col items-center">
+                    <span id="shot-indicator" class="text-xs font-mono text-emerald-400 mb-2 uppercase tracking-widest">Shot 1 of 4</span>
+                    <span id="countdown-number" class="text-8xl font-black font-mono tracking-wider animate-pulse text-white drop-shadow-2xl">5</span>
+                </div>
+            </div>
+
+            <!-- Framing Guides -->
+            <div class="absolute inset-4 border-2 border-dashed border-zinc-500/40 pointer-events-none rounded-lg flex flex-col justify-between p-2">
+                <div id="frame-brand-label" class="self-center bg-black/60 px-2 py-0.5 rounded text-[10px] font-mono text-zinc-300 tracking-wider">Resibo Prints</div>
+                <div id="frame-mode-label" class="self-center bg-black/60 px-2 py-0.5 rounded text-[10px] font-mono text-zinc-400">Auto Timer</div>
+            </div>
+        </section>
+
+        <!-- View Section: Editor & Stickers Screen -->
+        <section id="view-editor" class="hidden relative w-full max-w-md h-[72vh] bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 flex flex-col p-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-sm font-bold">Customize Photo</h2>
+                <span class="text-[10px] font-mono text-emerald-400 px-2 py-0.5 bg-emerald-950 rounded border border-emerald-900">READY</span>
+            </div>
+            <div class="flex-1 bg-zinc-900 rounded-xl relative overflow-hidden flex items-center justify-center border border-zinc-800">
+                <img id="captured-preview-img" class="w-full h-full object-contain" src="" alt="Capture">
+                <div id="active-sticker" class="absolute bottom-6 bg-black/70 px-3 py-1 rounded-full text-xs font-bold text-white border border-white/20 backdrop-blur cursor-move">
+                    ❤️ Congrats!
+                </div>
+            </div>
+            <div class="flex gap-2 mt-3">
+                <button onclick="triggerPrintSequence()" class="flex-1 py-3 bg-white text-black font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-200 transition">
+                    Print Thermal Copy
+                </button>
+            </div>
+        </section>
+
+        <!-- View Section: Digital Copy QR Screen -->
+        <section id="view-digital" class="hidden relative w-full max-w-md h-[72vh] bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 flex flex-col items-center justify-center p-6 shadow-2xl text-center">
+            <h2 class="text-base font-bold mb-1">Get Your Digital Copies</h2>
+            <p class="text-xs text-zinc-400 font-mono mb-4">Scan QR to download your photo</p>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-white p-3 rounded-xl flex flex-col items-center">
+                    <div id="gif-qrcode-container" class="w-28 h-28 flex items-center justify-center mb-1"></div>
+                    <span class="text-[10px] font-mono text-zinc-900 font-bold">Animated GIF</span>
+                </div>
+                <div class="bg-white p-3 rounded-xl flex flex-col items-center">
+                    <div id="jpg-qrcode-container" class="w-28 h-28 flex items-center justify-center mb-1"></div>
+                    <span class="text-[10px] font-mono text-zinc-900 font-bold">HD Color</span>
+                </div>
+            </div>
+            <button onclick="finishSession()" class="w-full max-w-xs py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition">
+                Finish & Reset Session
+            </button>
+        </section>
+
+        <!-- View Section: Memories Gallery -->
+        <section id="view-memories" class="hidden w-full max-w-md h-[72vh] bg-zinc-950 rounded-2xl overflow-y-auto p-4 border border-zinc-800 flex flex-col gap-3">
+            <div class="flex justify-between items-center pb-2 border-b border-zinc-800">
+                <h2 class="text-lg font-bold">Memories</h2>
+                <span id="memory-count" class="text-xs text-zinc-400 font-mono">0 snaps</span>
+            </div>
+            <div id="gallery-grid" class="grid grid-cols-2 gap-3"></div>
+        </section>
+
+        <!-- View Section: Settings (Editable Name Panel) -->
+        <section id="view-settings" class="hidden w-full max-w-md h-[72vh] bg-zinc-950 rounded-2xl overflow-y-auto p-5 border border-zinc-800 flex flex-col gap-4">
+            <h2 class="text-base font-bold border-b border-zinc-800 pb-2">Booth Configuration</h2>
+            
+            <div class="space-y-1">
+                <label class="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Business / Event Name</label>
+                <input type="text" id="config-brand-input" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 text-sm text-white font-mono focus:outline-none focus:border-white transition" placeholder="e.g. Resibo Prints">
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Printer Mode</label>
+                <select class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 text-sm text-white font-mono">
+                    <option>Bluetooth Thermal (ESC/POS)</option>
+                    <option>USB Direct Print</option>
+                    <option>Simulated Print Only</option>
+                </select>
+            </div>
+
+            <button onclick="saveSettings()" class="w-full py-3 bg-white text-black rounded-lg font-bold text-xs uppercase tracking-wider mt-4 hover:bg-zinc-200 transition">
+                Save & Apply Settings
+            </button>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="w-full bg-black border-t border-zinc-900 py-3 px-6 flex justify-around items-center z-30">
+        <button onclick="switchView('memories')" class="flex flex-col items-center gap-1 text-zinc-500 hover:text-white transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+            <span class="text-[10px] tracking-wider uppercase">Memories</span>
+        </button>
+        <button onclick="switchView('welcome')" class="flex flex-col items-center gap-1 text-white transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            <span class="text-[10px] tracking-wider uppercase">Camera</span>
+        </button>
+        <button onclick="switchView('settings')" class="flex flex-col items-center gap-1 text-zinc-500 hover:text-white transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="text-[10px] tracking-wider uppercase">Settings</span>
+        </button>
+    </nav>
+
+    <!-- Core App Logic -->
+    <script>
+        let appConfig = {
+            brandName: localStorage.getItem('thermobooth_brand') || "Resibo Prints"
+        };
+
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('snapshot-canvas');
+        const countdownOverlay = document.getElementById('countdown-overlay');
+        const countdownNumber = document.getElementById('countdown-number');
+        const shotIndicator = document.getElementById('shot-indicator');
+        const capturedPreviewImg = document.getElementById('captured-preview-img');
+        const galleryGrid = document.getElementById('gallery-grid');
+        const memoryCountLabel = document.getElementById('memory-count');
+        const brandTitleDisplay = document.getElementById('brand-title-display');
+        const frameBrandLabel = document.getElementById('frame-brand-label');
+        const frameModeLabel = document.getElementById('frame-mode-label');
+        const configBrandInput = document.getElementById('config-brand-input');
+
+        let memories = [];
+        let selectedLayoutCount = 1;
+        let lastCapturedDataUrl = "";
+
+        function updateBrandUI() {
+            brandTitleDisplay.textContent = appConfig.brandName;
+            frameBrandLabel.textContent = appConfig.brandName;
+            configBrandInput.value = appConfig.brandName;
+        }
+        updateBrandUI();
+
+        function saveSettings() {
+            appConfig.brandName = configBrandInput.value.trim() || "Resibo Prints";
+            localStorage.setItem('thermobooth_brand', appConfig.brandName);
+            updateBrandUI();
+            switchView('welcome');
+        }
+
+        function switchView(viewId) {
+            const views = ['welcome', 'payment', 'layout', 'camera', 'editor', 'digital', 'memories', 'settings'];
+            views.forEach(v => {
+                document.getElementById(`view-${v}`).classList.add('hidden');
+            });
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+
+            if (viewId === 'payment') {
+                renderPaymentQR();
+            } else if (viewId === 'camera') {
+                initCamera();
+                startMultiShotSequence();
+            } else if (viewId === 'digital') {
+                renderDigitalQRs();
+            }
+        }
+
+        function renderPaymentQR() {
+            const container = document.getElementById('payment-qrcode-container');
+            container.innerHTML = "";
+            new QRCode(container, {
+                text: "https://pay.gcash.com/mock-payment-booth",
+                width: 110,
+                height: 110,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
+        function renderDigitalQRs() {
+            const gifContainer = document.getElementById('gif-qrcode-container');
+            const jpgContainer = document.getElementById('jpg-qrcode-container');
+            gifContainer.innerHTML = "";
+            jpgContainer.innerHTML = "";
+
+            // Use a compact structured text payload that is small enough for standard QR codes
+            let qrText = "https://resiboprints.local/download?session=" + Date.now();
+
+            // Generate HD Color QR
+            new QRCode(jpgContainer, {
+                text: qrText,
+                width: 90,
+                height: 90,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            // Generate Animated GIF QR
+            new QRCode(gifContainer, {
+                text: qrText,
+                width: 90,
+                height: 90,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
+        async function initCamera() {
+            if (video.srcObject) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+                await video.play();
+            } catch (err) {
+                console.error("Camera access error:", err);
+            }
+        }
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            switchView('payment');
+        });
+
+        document.getElementById('sim-paid-btn').addEventListener('click', () => {
+            switchView('layout');
+        });
+
+        function selectLayout(count) {
+            selectedLayoutCount = count;
+            frameModeLabel.textContent = `${count} Shot(s) Mode`;
+            switchView('camera');
+        }
+
+        async function startMultiShotSequence() {
+            let capturedImages = [];
+            let totalShots = selectedLayoutCount;
+
+            for (let shotIndex = 1; shotIndex <= totalShots; shotIndex++) {
+                shotIndicator.textContent = totalShots > 1 ? `Shot ${shotIndex} of ${totalShots}` : `Single Photo`;
+                countdownOverlay.classList.remove('hidden');
+                
+                let timeLeft = 3; 
+                countdownNumber.textContent = timeLeft;
+
+                await new Promise((resolve) => {
+                    const timer = setInterval(() => {
+                        timeLeft--;
+                        if (timeLeft > 0) {
+                            countdownNumber.textContent = timeLeft;
+                        } else {
+                            clearInterval(timer);
+                            countdownOverlay.classList.add('hidden');
+                            
+                            if (video.videoWidth && video.videoHeight) {
+                                canvas.width = video.videoWidth;
+                                canvas.height = video.videoHeight;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                                capturedImages.push(canvas.toDataURL('image/png'));
+                            }
+                            resolve();
+                        }
+                    }, 1000);
+                });
+
+                if (shotIndex < totalShots) {
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+
+            processFinalStrip(capturedImages);
+        }
+
+        function processFinalStrip(images) {
+            const outCanvas = document.createElement('canvas');
+            const outCtx = outCanvas.getContext('2d');
+
+            if (images.length === 4) {
+                const w = video.videoWidth || 640;
+                const h = video.videoHeight || 480;
+                outCanvas.width = w * 2;
+                outCanvas.height = h * 2;
+
+                let loadedCount = 0;
+                images.forEach((imgSrc, index) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let x = (index % 2) * w;
+                        let y = Math.floor(index / 2) * h;
+                        outCtx.drawImage(img, x, y, w, h);
+                        loadedCount++;
+                        if (loadedCount === 4) finalizeComposition(outCanvas.toDataURL('image/png'));
+                    };
+                    img.src = imgSrc;
+                });
+            } else {
+                lastCapturedDataUrl = images[0];
+                finalizeComposition(lastCapturedDataUrl);
+            }
+        }
+
+        function finalizeComposition(dataUrl) {
+            lastCapturedDataUrl = dataUrl;
+            capturedPreviewImg.src = lastCapturedDataUrl;
+
+            memories.unshift({ id: Date.now(), url: lastCapturedDataUrl, time: new Date().toLocaleTimeString() });
+            renderGallery();
+
+            switchView('editor');
+        }
+
+        function triggerPrintSequence() {
+            switchView('digital');
+        }
+
+        function finishSession() {
+            switchView('welcome');
+        }
+
+        function renderGallery() {
+            galleryGrid.innerHTML = '';
+            memoryCountLabel.textContent = `${memories.length} snaps`;
+            memories.forEach(mem => {
+                const card = document.createElement('div');
+                card.className = "bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 flex flex-col";
+                card.innerHTML = `
+                    <img src="${mem.url}" class="w-full h-32 object-contain bg-black">
+                    <div class="p-2 flex justify-between items-center bg-zinc-950">
+                        <span class="text-[10px] font-mono text-zinc-400">${mem.time}</span>
+                        <span class="text-[9px] px-1.5 py-0.5 bg-zinc-800 text-zinc-300 rounded font-mono">SAVED</span>
+                    </div>
+                `;
+                galleryGrid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
